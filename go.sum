@@ -1,5 +1,7 @@
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/digitalocean/go-qemu v0.0.0-20230711162256-2e3d0186973e h1:x5PInTuXLddHWHlePCNAcM8QtUfOGx44f3UmYPMtDcI=
+github.com/digitalocean/go-qemu v0.0.0-20230711162256-2e3d0186973e/go.mod h1:K4+o74YGNjOb9N6yyG+LPj1NjHtk+Qz0IYQPvirbaLs=
 github.com/fsnotify/fsnotify v1.7.0 h1:8JEhPFa5W2WU7YfeZzPNqzMP6Lwt7L2715Ggo0nosvA=
 github.com/fsnotify/fsnotify v1.7.0/go.mod h1:40Bi/Hjc2AVfZrqy+aj+yEI+/bRxZnMJyTJwOpGvigM=
 github.com/hashicorp/hcl v1.0.0 h1:0Anlzjpi4vEasTeNFn2mLJgTSwt0+6sfsiTG8qcWGx4=

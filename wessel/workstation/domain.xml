@@ -1,0 +1,140 @@
+<!--这是一个名为 Testguest1 的 KVM 虚拟机，内存为 1024 MiB。-->
+<domain type='kvm'>
+ <name>Testguest1</name>
+ <uuid>ec6fbaa1-3eb4-49da-bf61-bb02fbec4967</uuid>
+ <memory unit='KiB'>1048576</memory>
+ <currentMemory unit='KiB'>1048576</currentMemory>
+<!--虚拟机被分配为单个虚拟 CPU（vCPU）。-->
+ <vcpu placement='static'>1</vcpu>
+<!--机器构架被设置为 AMD64 和 Intel 64 架构，并使用 Intel Q35 机器类型来决定功能兼容性。操作系统被设置为从硬盘引导。-->
+ <os>
+  <type arch='x86_64' machine='pc-q35-4.1'>hvm</type>
+  <boot dev='hd'/>
+ </os>
+<!--acpi 和 apic hypervisor 功能被禁用。-->
+ <features>
+  <acpi/>
+  <apic/>
+ </features>
+<!--功能 XML 中的主机 CPU 定义（可使用 virsh capabilities 获得）会自动复制到虚拟机的 XML 配置中。因此，当虚拟机引导时，libvirt 会选择与主机 CPU 类似的 CPU 型号，然后添加额外的功能来尽可能接近主机型号。-->
+ <cpu mode='host-model' check='partial'/>
+<!--VM 的虚拟硬件时钟使用 UTC 时区。另外，设置了三个不同的计时器以便与 QEMU 管理程序同步。-->
+ <clock offset='utc'>
+  <timer name='rtc' tickpolicy='catchup'/>
+  <timer name='pit' tickpolicy='delay'/>
+  <timer name='hpet' present='no'/>
+ </clock>
+<!--当虚拟机关闭或其操作系统意外终止时，libvirt 会终止虚拟机并释放其所有分配的资源。虚拟机重启后，libvirt 会使用同样的配置重新启动它。-->
+ <on_poweroff>destroy</on_poweroff>
+ <on_reboot>restart</on_reboot>
+ <on_crash>destroy</on_crash>
+<!--这个虚拟机禁用 S3 和 S4 ACPI 睡眠状态。-->
+ <pm>
+  <suspend-to-mem enabled='no'/>
+  <suspend-to-disk enabled='no'/>
+ </pm>
+<!--虚拟机使用 /usr/bin/qemu-kvm 二进制文件进行模拟，它连接了两个磁盘设备。-->
+<!--第一个磁盘是基于主机上存储的 /var/lib/libvirt/images/Testguest.qcow2 的虚拟硬盘，其逻辑设备名称设为 hda。-->
+ <devices>
+  <emulator>/usr/bin/qemu-kvm</emulator>
+  <disk type='file' device='disk'>
+   <driver name='qemu' type='qcow2'/>
+   <source file='/var/lib/libvirt/images/Testguest.qcow2'/>
+   <target dev='hda' bus='ide'/>
+  </disk>
+<!--第二个磁盘是虚拟 CD-ROM，其逻辑设备名称设为 hdb。-->
+  <disk type='file' device='cdrom'>
+   <driver name='qemu' type='raw'/>
+   <target dev='hdb' bus='ide'/>
+   <readonly/>
+  </disk>
+<!--VM 使用单个控制器来附加 USB 设备，而用于 PCI-Express（PCIe）设备的根控制器。此外，提供了 virtio-serial 控制器，它使虚拟机能够以各种方式与主机进行交互，如串行控制台。-->
+  <controller type='usb' index='0' model='qemu-xhci' ports='15'/>
+  <controller type='sata' index='0'/>
+  <controller type='pci' index='0' model='pcie-root'/>
+  <controller type='pci' index='1' model='pcie-root-port'>
+   <model name='pcie-root-port'/>
+   <target chassis='1' port='0x10'/>
+  </controller>
+  <controller type='pci' index='2' model='pcie-root-port'>
+   <model name='pcie-root-port'/>
+   <target chassis='2' port='0x11'/>
+  </controller>
+  <controller type='pci' index='3' model='pcie-root-port'>
+   <model name='pcie-root-port'/>
+   <target chassis='3' port='0x12'/>
+  </controller>
+  <controller type='pci' index='4' model='pcie-root-port'>
+   <model name='pcie-root-port'/>
+   <target chassis='4' port='0x13'/>
+  </controller>
+  <controller type='pci' index='5' model='pcie-root-port'>
+   <model name='pcie-root-port'/>
+   <target chassis='5' port='0x14'/>
+  </controller>
+  <controller type='pci' index='6' model='pcie-root-port'>
+   <model name='pcie-root-port'/>
+   <target chassis='6' port='0x15'/>
+  </controller>
+  <controller type='pci' index='7' model='pcie-root-port'>
+   <model name='pcie-root-port'/>
+   <target chassis='7' port='0x16'/>
+  </controller>
+  <controller type='virtio-serial' index='0'/>
+<!--网络接口是在虚拟机中设置的，它使用 default 虚拟网络和 rtl8139 网络设备型号。-->
+ <interface type='network'>
+  <mac address='52:54:00:65:29:21'/>
+  <source network='default'/>
+  <model type='rtl8139'/>
+ </interface>
+<!--pty 串行控制台是在虚拟机上设置的，可实现基本虚拟机与主机的通信。控制台使用端口 1 上的UNIX 通道，以及端口 2 上的半虚拟化 SPICE。这个设置是自动设置的，我们不推荐修改这些设置。-->
+  <serial type='pty'>
+   <target type='isa-serial' port='0'>
+    <model name='isa-serial'/>
+   </target>
+  </serial>
+  <console type='pty'>
+   <target type='serial' port='0'/>
+  </console>
+  <channel type='unix'>
+   <target type='virtio' name='org.qemu.guest_agent.0'/>
+   <address type='virtio-serial' controller='0' bus='0' port='1'/>
+  </channel>
+  <channel type='spicevmc'>
+   <target type='virtio' name='com.redhat.spice.0'/>
+    <address type='virtio-serial' controller='0' bus='0' port='2'/>
+  </channel>
+<!--虚拟机使用虚拟 usb 端口，该端口设定为接收表格输入，并设置了一个虚拟 ps2 端口以接收鼠标和键盘输入。这个设置是自动设置的，我们不推荐修改这些设置。-->
+  <input type='tablet' bus='usb'>
+   <address type='usb' bus='0' port='1'/>
+  </input>
+  <input type='mouse' bus='ps2'/>
+  <input type='keyboard' bus='ps2'/>
+<!--虚拟机使用 VNC 和 SPICE 协议来渲染其图形输出，图形压缩是关闭的。-->
+  <graphics type='spice' autoport='yes' listen='127.0.0.1'>
+   <listen type='address' address='127.0.0.1'/>
+   <image compression='off'/>
+  </graphics>
+  <graphics type='vnc' port='-1' autoport='yes' listen='127.0.0.1'>
+   <listen type='address' address='127.0.0.1'/>
+  </graphics>
+<!--为虚拟机设置了 ICH6 HDA 声音设备，并将 QEMU QXL 半虚拟化帧缓冲器设备设为视频加速器。这个设置是自动设置的，我们不推荐修改这些设置。-->
+  <sound model='ich6'>
+   <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0'/>
+  </sound>
+  <video>
+   <model type='qxl' ram='65536' vram='65536' vgamem='16384' heads='1' primary='yes'/>
+   <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
+  </video>
+<!--虚拟机有两个重新目录来远程附加 USB 设备，打开内存 ballooning。这个设置是自动设置的，我们不推荐修改这些设置。-->
+  <redirdev bus='usb' type='spicevmc'>
+   <address type='usb' bus='0' port='1'/>
+  </redirdev>
+  <redirdev bus='usb' type='spicevmc'>
+   <address type='usb' bus='0' port='2'/>
+  </redirdev>
+  <memballoon model='virtio'>
+   <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
+  </memballoon>
+ </devices>
+</domain>

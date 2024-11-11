@@ -17,12 +17,15 @@ const (
 	VM_FORCE_SHUTDOWN                       // 2 强制关机
 	VM_RESTART                              // 3 重启
 	VM_UNDEFINE                             // 4 临时删除，只删除了虚拟机的配置信息。数据依旧保留在磁盘中
-	VM_DELETE
-	VM_SUSPEND // 5 将虚拟机置为暂停状态
+	VM_DELETE                               // 5 永久删除虚拟机
+	VM_SUSPEND                              // 6 将虚拟机置为暂停状态
+	VM_DEFINE                               // 7 创建虚拟机
+	VM_CREATE                               // 8 临时创建虚拟机
+	VM_ATTACH_DEVICE                        // 9 附加驱动器
 )
 
 // 虚拟机的常规运维操作，接收一个虚拟机的uuid，操作类型，一个libvirt.Connect指针用于和libvirt进行连接
-func VMOperate(uuid string, types VMOperateType, c *libvirt.Connect) error {
+func VMOperate(uuid string, types VMOperateType, xml string, c *libvirt.Connect) error {
 	// 通过libvirt.Connect和uuid获取domain对象的指针
 	vm, err := c.LookupDomainByUUIDString(uuid)
 	if err != nil {
@@ -57,7 +60,21 @@ func VMOperate(uuid string, types VMOperateType, c *libvirt.Connect) error {
 			return err
 		}
 	case VM_DELETE:
-		if err := vmDelete(vm); err != nil {
+		if err := delete(vm); err != nil {
+			return err
+		}
+	case VM_DEFINE:
+		if err := define(xml, c); err != nil {
+			return err
+		}
+	case VM_CREATE:
+		if err := create(xml, c); err != nil {
+			return err
+		}
+	case VM_ATTACH_DEVICE:
+		// VIR_DOMAIN_AFFECT_LIVE：表示设备更改仅在当前活跃的域实例上进行，并立即生效。
+		// VIR_DOMAIN_AFFECT_CONFIG：表示设备更改将持久化到域的配置文件中，以便在下一次启动时仍然有效。
+		if err := vm.AttachDeviceFlags(xml, libvirt.DOMAIN_DEVICE_MODIFY_LIVE|libvirt.DOMAIN_DEVICE_MODIFY_CONFIG); err != nil {
 			return err
 		}
 	}
@@ -65,7 +82,7 @@ func VMOperate(uuid string, types VMOperateType, c *libvirt.Connect) error {
 }
 
 // 从磁盘删除虚拟机，该删除将永久删除虚拟机
-func vmDelete(vm *libvirt.Domain) error {
+func delete(vm *libvirt.Domain) error {
 	// 获取虚拟机的快照列表,按照快照树进行返回
 	snapshots, err := vm.ListAllSnapshots(libvirt.DOMAIN_SNAPSHOT_LIST_TOPOLOGICAL)
 	if err != nil {
@@ -119,6 +136,35 @@ func vmDelete(vm *libvirt.Domain) error {
 		if err := os.Remove(v); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// 永久创建虚拟机
+func define(xml string, c *libvirt.Connect) error {
+	// 通过xml文件生成domain指针
+	d, err := c.DomainDefineXML(xml)
+	if err != nil {
+		return err
+	}
+	defer d.Free()
+	// 执行创建操作
+	if err := d.Create(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func create(xml string, c *libvirt.Connect) error {
+	// 通过xml文件生成domain指针
+	d, err := c.DomainCreateXML(xml, libvirt.DOMAIN_NONE)
+	defer d.Free()
+	if err != nil {
+		return err
+	}
+	// 执行创建操作
+	if err := d.Create(); err != nil {
+		return err
 	}
 	return nil
 }
