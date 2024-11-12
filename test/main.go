@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"libvirt.org/go/libvirt"
-	"libvirt.org/go/libvirtxml"
 )
 
 func main() {
@@ -14,26 +13,15 @@ func main() {
 		log.Fatalf(err.Error())
 	}
 	defer conn.Close()
-	vm, err := conn.LookupDomainByUUIDString("d5de9a0c-170b-47e4-b867-5d94713f1c99")
+	storages, err := conn.ListAllStoragePools(libvirt.CONNECT_LIST_STORAGE_POOLS_ACTIVE | libvirt.CONNECT_LIST_STORAGE_POOLS_AUTOSTART)
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
-	domainXMLStr, err := vm.GetXMLDesc(libvirt.DOMAIN_XML_INACTIVE)
-	if err != nil {
-		log.Fatalf(err.Error())
-	}
-	// 调用libvirt-xml库解析xml文件
-	var d libvirtxml.Domain
-	if err := d.Unmarshal(domainXMLStr); err != nil {
-		log.Fatalf(err.Error())
-	}
-	diskPaths := make([]string, len(d.Devices.Disks))
-	// 获取磁盘相关配置
-	for i, diskinfo := range d.Devices.Disks {
-		if diskinfo.Device == "cdrom" {
-			continue
+	for _, v := range storages {
+		xml, err := v.GetXMLDesc(libvirt.STORAGE_XML_INACTIVE)
+		if err != nil {
+			log.Fatalf(err.Error())
 		}
-		diskPaths[i] = diskinfo.Source.File.File
+		fmt.Println(xml)
 	}
-	fmt.Println(diskPaths)
 }

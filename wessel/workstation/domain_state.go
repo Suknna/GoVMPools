@@ -7,14 +7,14 @@ import (
 )
 
 // domain 列表返回值
-type VM struct {
-	ID        string
-	Name      string
-	HostName  string
-	Status    string
-	Image     string
-	Vcpus     uint
-	MemoryUse uint64
+type VirtualMachineInfo struct {
+	VirtualMachineID        string
+	VirtualMachineName      string
+	HypervisorHostName      string
+	VirtualMachineStatus    string
+	VirtualMachineImage     string
+	VirtualMachineVcpus     uint
+	VirtualMachineMemoryUse uint64
 }
 
 /*
@@ -25,7 +25,7 @@ type VM struct {
 4. 当前状态
 6. 镜像版本
 */
-func GetVMList(c *libvirt.Connect) ([]VM, error) {
+func GetVMList(c *libvirt.Connect) ([]VirtualMachineInfo, error) {
 	// 获取全部domain列表，处于在线的和离线的。返回一个libvirt.Domain列表
 	ld, err := c.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE | libvirt.CONNECT_LIST_DOMAINS_INACTIVE)
 	if err != nil {
@@ -43,51 +43,51 @@ func GetVMList(c *libvirt.Connect) ([]VM, error) {
 		return nil, err
 	}
 	// 存储domain列表
-	vs := make([]VM, len(ld))
-	for _, domain := range ld {
+	vs := make([]VirtualMachineInfo, len(ld))
+	for num, domain := range ld {
 		// 声明单一的vm对象
-		var v VM
+		var v VirtualMachineInfo
 		// 获取uuid
-		v.ID, err = domain.GetUUIDString()
+		v.VirtualMachineID, err = domain.GetUUIDString()
 		if err != nil {
 			return nil, err
 		}
 		// 获取名称
-		v.Name, err = domain.GetName()
+		v.VirtualMachineName, err = domain.GetName()
 		if err != nil {
 			return nil, err
 		}
 		// 获取节点名称
-		v.HostName = hostname
+		v.HypervisorHostName = hostname
 		// 获取当前状态
 		domainStateInt, _, err := domain.GetState()
 		if err != nil {
 			return nil, err
 		}
-		v.Status = ParserVMState(int(domainStateInt))
+		v.VirtualMachineStatus = ParserVMState(int(domainStateInt))
 		// 获取当前虚拟机的镜像类型
-		v.Image, err = domain.GetOSType()
+		v.VirtualMachineImage, err = domain.GetOSType()
 		if err != nil {
 			return nil, err
 		}
 		// 获取虚拟机分配的最大cpu
-		v.Vcpus, err = domain.GetMaxVcpus()
+		v.VirtualMachineVcpus, err = domain.GetMaxVcpus()
 		if err != nil {
 			return nil, err
 		}
 		// 获取虚拟机分配的最大内存
-		v.MemoryUse, err = domain.GetMaxMemory()
+		v.VirtualMachineMemoryUse, err = domain.GetMaxMemory()
 		if err != nil {
 			return nil, err
 		}
-		vs = append(vs, v)
+		vs[num] = v
 	}
 	return vs, nil
 }
 
 // 将传入的domainstate int转换为string
-func ParserVMState(DomainState int) string {
-	switch DomainState {
+func ParserVMState(VirtualMachineInfoState int) string {
+	switch VirtualMachineInfoState {
 	case int(libvirt.DOMAIN_NOSTATE):
 		return "NOSTATE"
 	case int(libvirt.DOMAIN_RUNNING):
