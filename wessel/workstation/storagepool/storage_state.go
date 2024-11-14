@@ -1,4 +1,4 @@
-package workstation
+package storagepool
 
 import (
 	"libvirt.org/go/libvirt"

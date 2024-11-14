@@ -1,4 +1,4 @@
-package workstation
+package vm
 
 import (
 	"fmt"
