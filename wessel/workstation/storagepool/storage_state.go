@@ -26,20 +26,7 @@ VIR_CONNECT_LIST_STORAGE_POOLS_VSTORAGE		虚拟存储
 VIR_CONNECT_LIST_STORAGE_POOLS_ISCSI_DIRECT	直接iSCSI
 */
 
-const bytesInGB = 1 << 30
-
-type StoragePoolInfo struct {
-	StoragePoolType       string
-	StoragePoolName       string
-	StoragePoolID         string
-	StoragePoolCapacity   float64 // 存储池的总容量单位G
-	StoragePoolAllocation float64 // 存储池已经分配出去的容量单位G
-	StoragePoolAvailable  float64 // 存储池尚未分配的容量单位G
-	StoragePoolInfoPath   string
-	StoragePoolInfoMode   string
-}
-
-func GetStorageList(c *libvirt.Connect) ([]StoragePoolInfo, error) {
+func GetStorageList(c *libvirt.Connect) ([]libvirtxml.StoragePool, error) {
 	storagePools, err := c.ListAllStoragePools(libvirt.CONNECT_LIST_STORAGE_POOLS_ACTIVE | libvirt.CONNECT_LIST_STORAGE_POOLS_AUTOSTART)
 	if err != nil {
 		return nil, err
@@ -49,7 +36,7 @@ func GetStorageList(c *libvirt.Connect) ([]StoragePoolInfo, error) {
 			s.Free()
 		}
 	}()
-	spis := make([]StoragePoolInfo, len(storagePools))
+	spis := make([]libvirtxml.StoragePool, len(storagePools))
 	// 获取storage的配置信息
 	for num, storagePool := range storagePools {
 		// 获取xml内容
@@ -58,21 +45,11 @@ func GetStorageList(c *libvirt.Connect) ([]StoragePoolInfo, error) {
 			return nil, err
 		}
 		// 解析xml内容
-		xmlSP := &libvirtxml.StoragePool{}
-		if err := xmlSP.Unmarshal(xml); err != nil {
+		storagepool := libvirtxml.StoragePool{}
+		if err := storagepool.Unmarshal(xml); err != nil {
 			return nil, err
 		}
-		spi := StoragePoolInfo{
-			StoragePoolType:       xmlSP.Type,
-			StoragePoolName:       xmlSP.Name,
-			StoragePoolID:         xmlSP.UUID,
-			StoragePoolCapacity:   float64(xmlSP.Capacity.Value) / bytesInGB,
-			StoragePoolAllocation: float64(xmlSP.Allocation.Value) / bytesInGB,
-			StoragePoolAvailable:  float64(xmlSP.Available.Value) / bytesInGB,
-			StoragePoolInfoPath:   xmlSP.Target.Path,
-			StoragePoolInfoMode:   xmlSP.Target.Permissions.Mode,
-		}
-		spis[num] = spi
+		spis[num] = storagepool
 	}
 	return spis, nil
 }

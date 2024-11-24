@@ -1,31 +1,11 @@
 package vm
 
 import (
-	"os"
-
 	"libvirt.org/go/libvirt"
+	"libvirt.org/go/libvirtxml"
 )
 
-// domain 列表返回值
-type VirtualMachineInfo struct {
-	VirtualMachineID        string
-	VirtualMachineName      string
-	HypervisorHostName      string
-	VirtualMachineStatus    string
-	VirtualMachineImage     string
-	VirtualMachineVcpus     uint
-	VirtualMachineMemoryUse uint64
-}
-
-/*
-获取domain 的列表包括如下字段
-1. uuid
-2. 名称
-3. 所属节点
-4. 当前状态
-6. 镜像版本
-*/
-func GetVMList(c *libvirt.Connect) ([]VirtualMachineInfo, error) {
+func GetVMList(c *libvirt.Connect) ([]libvirtxml.Domain, error) {
 	// 获取全部domain列表，处于在线的和离线的。返回一个libvirt.Domain列表
 	ld, err := c.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE | libvirt.CONNECT_LIST_DOMAINS_INACTIVE)
 	if err != nil {
@@ -37,50 +17,18 @@ func GetVMList(c *libvirt.Connect) ([]VirtualMachineInfo, error) {
 			d.Free()
 		}
 	}()
-	// 获取当前主机名
-	hostname, err := os.Hostname()
-	if err != nil {
-		return nil, err
-	}
 	// 存储domain列表
-	vs := make([]VirtualMachineInfo, len(ld))
+	vs := make([]libvirtxml.Domain, len(ld))
 	for num, domain := range ld {
-		// 声明单一的vm对象
-		var v VirtualMachineInfo
-		// 获取uuid
-		v.VirtualMachineID, err = domain.GetUUIDString()
+		xml, err := domain.GetXMLDesc(libvirt.DOMAIN_XML_SECURE | libvirt.DOMAIN_XML_INACTIVE | libvirt.DOMAIN_XML_MIGRATABLE | libvirt.DOMAIN_XML_UPDATE_CPU)
 		if err != nil {
 			return nil, err
 		}
-		// 获取名称
-		v.VirtualMachineName, err = domain.GetName()
-		if err != nil {
+		domainInfo := libvirtxml.Domain{}
+		if err := domainInfo.Unmarshal(xml); err != nil {
 			return nil, err
 		}
-		// 获取节点名称
-		v.HypervisorHostName = hostname
-		// 获取当前状态
-		domainStateInt, _, err := domain.GetState()
-		if err != nil {
-			return nil, err
-		}
-		v.VirtualMachineStatus = ParserVMState(int(domainStateInt))
-		// 获取当前虚拟机的镜像类型
-		v.VirtualMachineImage, err = domain.GetOSType()
-		if err != nil {
-			return nil, err
-		}
-		// 获取虚拟机分配的最大cpu
-		v.VirtualMachineVcpus, err = domain.GetMaxVcpus()
-		if err != nil {
-			return nil, err
-		}
-		// 获取虚拟机分配的最大内存
-		v.VirtualMachineMemoryUse, err = domain.GetMaxMemory()
-		if err != nil {
-			return nil, err
-		}
-		vs[num] = v
+		vs[num] = domainInfo
 	}
 	return vs, nil
 }
