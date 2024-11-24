@@ -95,5 +95,3 @@ func flat(c *libvirt.Connect, name string, nicName string) error {
 	}
 	return nil
 }
-
-func saveNetworkCfg(path string)
